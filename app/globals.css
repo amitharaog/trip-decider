@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #fafaf9;
+  color: #1c1917;
+  -webkit-tap-highlight-color: transparent;
+}
