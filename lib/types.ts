@@ -1,7 +1,8 @@
 export type DestinationType = "beach" | "mountains" | "heritage" | "nature";
 export type Budget = "under8k" | "8to15k" | "15to25k" | "25kplus";
 export type Dealbreaker = "longTravel" | "flights" | "trekking" | "party" | "cold";
-export type TripStatus = "collecting" | "deciding" | "locked";
+// collecting → deciding (options out, vetoes open) → confirming (first payment: plan fixed) → locked
+export type TripStatus = "collecting" | "deciding" | "confirming" | "locked";
 export type Fit = "works" | "stretch" | "no";
 
 export const DESTINATION_TYPES: { id: DestinationType; label: string; emoji: string }[] = [
@@ -34,24 +35,21 @@ export type TripRow = {
   name: string;
   organizer_name: string;
   members: string[];
-  upi_id: string;
+  upi_id: string | null;
   advance_amount: number;
   min_confirmations: number;
   admin_token: string;
   status: TripStatus;
-  date_window: DateWindow | null;
-  options: TripOption[] | null;
+  decision: Decision | null; // added by supabase/migration.sql
   created_at: string;
-  decided_at: string | null;
-  locked_at: string | null;
 };
 
 export type ResponseRow = {
-  member_name: string;
-  member_token: string;
-  windows: DateRange[];
+  id: string;
+  person_name: string;
+  date_windows: DateRange[];
   destination_types: DestinationType[];
-  budget: Budget;
+  budget_band: Budget;
   dealbreakers: Dealbreaker[];
 };
 
@@ -63,9 +61,11 @@ export type DateWindow = {
   available: string[];
 };
 
+// Frozen into trips.decision when collection closes: labels only, never raw preferences.
+export type Decision = { window: DateWindow; options: TripOption[] };
+
 export type MemberFit = { member: string; fit: Fit; note?: string };
 
-// What gets frozen into trips.options — labels only, never raw preferences.
 export type TripOption = {
   id: string;
   name: string;
@@ -78,10 +78,10 @@ export type TripOption = {
 };
 
 export type ConfirmationRow = {
-  member_name: string;
-  claimed_at: string;
+  person_name: string;
+  option_key: string;
+  marked_paid_at: string;
   verified: boolean;
-  verified_at: string | null;
 };
 
 // Safe to send to any group member.
@@ -92,7 +92,7 @@ export type PublicTrip = {
   members: string[];
   status: TripStatus;
   submitted: string[];
-  upiId: string;
+  upiId: string | null;
   advanceAmount: number;
   minConfirmations: number;
   dateWindow: DateWindow | null;

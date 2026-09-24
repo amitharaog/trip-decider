@@ -42,7 +42,8 @@ export default function AdminView({ initial }: { initial: AdminState }) {
 
   const missing = trip.members.filter((m) => !trip.submitted.includes(m));
   const plan = trip.options?.find((o) => o.id === trip.planId) ?? null;
-  const verifiedCount = trip.confirmations.filter((c) => c.verified).length;
+  // Only payments made for the current plan count towards locking it.
+  const verifiedCount = trip.confirmations.filter((c) => c.verified && c.option_key === trip.planId).length;
 
   return (
     <div className="space-y-4">
@@ -50,7 +51,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">Organizer · private</p>
         <h1 className="mt-1 text-2xl font-bold leading-tight">{trip.name}</h1>
         <p className="text-sm text-stone-600">
-          {rupees(trip.advanceAmount)} advance · locks at {trip.minConfirmations} paid · UPI {trip.upiId}
+          {rupees(trip.advanceAmount)} advance · locks at {trip.minConfirmations} paid · UPI {trip.upiId ?? "not set"}
         </p>
       </header>
 
@@ -116,7 +117,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
           {trip.dateWindow && plan && (
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                The plan{trip.vetoedOptionIds.length > 0 && ` · ${trip.vetoedOptionIds.length} vetoed`}
+                {trip.status === "deciding" ? "The plan · vetoes open until someone pays" : "The plan · final"}{trip.vetoedOptionIds.length > 0 && ` · ${trip.vetoedOptionIds.length} vetoed`}
               </p>
               <h2 className="text-xl font-bold">{plan.name}</h2>
               <p className="text-stone-700">{formatRange(trip.dateWindow.start, trip.dateWindow.end)}</p>
@@ -136,18 +137,19 @@ export default function AdminView({ initial }: { initial: AdminState }) {
             ) : (
               <ul className="mt-3 divide-y divide-stone-100">
                 {trip.confirmations.map((c) => (
-                  <li key={c.member_name} className="flex items-center justify-between gap-2 py-2">
+                  <li key={c.person_name} className="flex items-center justify-between gap-2 py-2">
                     <span>
-                      <span className="font-medium">{c.member_name}</span>
+                      <span className="font-medium">{c.person_name}</span>
                       <span className="block text-xs text-stone-500">
-                        Says paid {formatDate(c.claimed_at.slice(0, 10), { day: "numeric", month: "short" })}
+                        Says paid {formatDate(c.marked_paid_at.slice(0, 10), { day: "numeric", month: "short" })}
+                        {c.option_key !== trip.planId && ` · paid for ${trip.options?.find((o) => o.id === c.option_key)?.name ?? c.option_key}, not the plan`}
                       </span>
                     </span>
                     {c.verified ? (
                       <span className="text-sm font-semibold text-green-700">✓ Verified</span>
                     ) : (
-                      <Button className="min-h-10 px-3 text-sm" disabled={!!busy} onClick={() => act(c.member_name, "verify", { member: c.member_name })}>
-                        {busy === c.member_name ? "…" : `Got ${rupees(trip.advanceAmount)}`}
+                      <Button className="min-h-10 px-3 text-sm" disabled={!!busy} onClick={() => act(c.person_name, "verify", { member: c.person_name })}>
+                        {busy === c.person_name ? "…" : `Got ${rupees(trip.advanceAmount)}`}
                       </Button>
                     )}
                   </li>
@@ -155,7 +157,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
               </ul>
             )}
             {(() => {
-              const notPaid = trip.members.filter((m) => !trip.confirmations.some((c) => c.member_name === m));
+              const notPaid = trip.members.filter((m) => !trip.confirmations.some((c) => c.person_name === m));
               return notPaid.length > 0 ? <p className="mt-2 text-sm text-stone-500">Not paid yet: {notPaid.join(", ")}</p> : null;
             })()}
           </Card>

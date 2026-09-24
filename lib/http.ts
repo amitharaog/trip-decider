@@ -1,5 +1,5 @@
 import "server-only";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -32,10 +32,6 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
   fail(400, "Invalid request body");
 }
 
-export function newToken() {
-  return randomBytes(24).toString("base64url");
-}
-
 export function safeEqual(a: string | null | undefined, b: string | null | undefined) {
   if (!a || !b) return false;
   const x = Buffer.from(a);
@@ -46,4 +42,15 @@ export function safeEqual(a: string | null | undefined, b: string | null | undef
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isUuid(s: string) {
   return UUID.test(s);
+}
+
+/**
+ * The token a member's phone gets after submitting, used to prove "I'm the
+ * person who submitted" when vetoing. Derived from the response's private id
+ * (never sent to the group) so it needs no extra column.
+ */
+export function memberToken(responseId: string) {
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!key) throw new Error("SUPABASE_SECRET_KEY must be set");
+  return createHmac("sha256", key).update(`trip-decider:member:${responseId}`).digest("base64url");
 }

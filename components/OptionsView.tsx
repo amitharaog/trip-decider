@@ -40,11 +40,11 @@ export default function OptionsView({
         </Card>
       )}
 
-      {plan && trip.status === "deciding" && (
+      {plan && (trip.status === "deciding" || trip.status === "confirming") && (
         <PlanCard trip={trip} plan={plan} me={me} token={token} onChange={onChange} />
       )}
 
-      {(trip.status === "deciding" || !me.verified) && <Commit trip={trip} me={me} verified={verified} onChange={onChange} />}
+      {(trip.status !== "locked" || !me.verified) && <Commit trip={trip} me={me} verified={verified} onChange={onChange} />}
 
       {options.length > 1 && (
         <section>
@@ -96,17 +96,17 @@ function PlanCard({ trip, plan, me, token, onChange }: { trip: PublicTrip; plan:
   }
 
   let vetoNote: string;
-  if (me.vetoUsed) vetoNote = "You've used your veto.";
+  if (trip.status !== "deciding") vetoNote = "Someone has paid, so the plan is final.";
+  else if (me.vetoUsed) vetoNote = "You've used your veto.";
   else if (isLast) vetoNote = "This is the last option, so it can't be vetoed.";
-  else if (me.paid) vetoNote = "You've paid, so you're committed. No veto.";
   else if (!me.submitted) vetoNote = "You didn't submit preferences, so you're going with the group's pick.";
   else if (!me.canVeto) vetoNote = "Veto from the phone you submitted your answers on.";
-  else vetoNote = "You have one veto for the whole trip. Vetoes are anonymous.";
+  else vetoNote = "You have one veto for the whole trip. Vetoes are anonymous and close as soon as anyone pays.";
 
   return (
     <Card className="border-2 border-brand-500">
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-        The plan{vetoCount > 0 && ` · ${vetoCount} option${vetoCount > 1 ? "s" : ""} vetoed`}
+        {trip.status === "deciding" ? "The plan" : "The plan · final"}{vetoCount > 0 && ` · ${vetoCount} option${vetoCount > 1 ? "s" : ""} vetoed`}
       </p>
       <div className="mt-1">
         <OptionHeader option={plan} />
@@ -116,7 +116,8 @@ function PlanCard({ trip, plan, me, token, onChange }: { trip: PublicTrip; plan:
       </div>
       <div className="mt-3 border-t border-stone-100 pt-3">
         <p className="mb-2 text-sm text-stone-600">
-          This is happening unless someone vetoes it. {vetoNote}
+          {trip.status === "deciding" && "This is happening unless someone vetoes it. "}
+          {vetoNote}
         </p>
         {me.canVeto && (
           <Button variant="danger" className="w-full" onClick={veto} disabled={busy}>
@@ -134,7 +135,7 @@ function PlanCard({ trip, plan, me, token, onChange }: { trip: PublicTrip; plan:
 function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; verified: string[]; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const link = upiLink(trip.upiId, trip.organizerName, trip.advanceAmount, `${trip.name} advance`);
+  const link = trip.upiId ? upiLink(trip.upiId, trip.organizerName, trip.advanceAmount, `${trip.name} advance`) : null;
   const pending = trip.paid.filter((p) => !p.verified).map((p) => p.member);
 
   async function markPaid() {
@@ -158,6 +159,7 @@ function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; ve
       </h2>
       <p className="text-sm text-stone-600">
         The trip locks when {trip.minConfirmations} people have paid. Saying yes doesn&apos;t count until you&apos;ve paid.
+        {trip.status === "deciding" && " The first payment makes the plan final and closes vetoes."}
       </p>
 
       <Progress value={verified.length} max={trip.minConfirmations} />
@@ -170,15 +172,21 @@ function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; ve
         </p>
       ) : (
         <div className="mt-3 space-y-2">
-          <a
-            href={link}
-            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-600 px-4 font-semibold text-white active:bg-brand-700"
-          >
-            Pay {rupees(trip.advanceAmount)} with UPI
-          </a>
-          <p className="text-center text-xs text-stone-500">
-            Opens GPay / PhonePe / Paytm. Or pay to <span className="font-mono">{trip.upiId}</span>
-          </p>
+          {link ? (
+            <>
+              <a
+                href={link}
+                className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-600 px-4 font-semibold text-white active:bg-brand-700"
+              >
+                Pay {rupees(trip.advanceAmount)} with UPI
+              </a>
+              <p className="text-center text-xs text-stone-500">
+                Opens GPay / PhonePe / Paytm. Or pay to <span className="font-mono">{trip.upiId}</span>
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-stone-600">Ask {trip.organizerName} for their UPI ID and pay them directly.</p>
+          )}
           <Button variant="secondary" className="w-full" onClick={markPaid} disabled={busy}>
             {busy ? "Saving…" : "I've paid"}
           </Button>

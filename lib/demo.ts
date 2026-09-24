@@ -1,6 +1,5 @@
 import "server-only";
 import { addDays, todayIST } from "./dates";
-import { newToken } from "./http";
 import { db } from "./supabase";
 import { insertTrip } from "./trips";
 
@@ -26,11 +25,11 @@ export async function createDemoTrip() {
   });
 
   const responses = [
-    { member_name: "Riya", windows: [r(f1, -1, 3), r(f2, 0, 3)], destination_types: ["beach", "nature"], budget: "8to15k", dealbreakers: ["party"] },
-    { member_name: "Siddharth", windows: [r(f1, 0, 2), r(f2, -1, 3)], destination_types: ["mountains", "nature"], budget: "15to25k", dealbreakers: ["flights"] },
-    { member_name: "Karan", windows: [r(f2, 0, 3)], destination_types: ["beach", "heritage"], budget: "8to15k", dealbreakers: ["longTravel"] },
-    { member_name: "Aisha", windows: [r(f1, 0, 2), r(f2, 0, 2)], destination_types: ["nature", "heritage"], budget: "under8k", dealbreakers: ["trekking", "cold"] },
-  ].map((x) => ({ ...x, trip_id: trip.id, member_token: newToken() }));
+    { person_name: "Riya", date_windows: [r(f1, -1, 3), r(f2, 0, 3)], destination_types: ["beach", "nature"], budget_band: "8to15k", dealbreakers: ["party"] },
+    { person_name: "Siddharth", date_windows: [r(f1, 0, 2), r(f2, -1, 3)], destination_types: ["mountains", "nature"], budget_band: "15to25k", dealbreakers: ["flights"] },
+    { person_name: "Karan", date_windows: [r(f2, 0, 3)], destination_types: ["beach", "heritage"], budget_band: "8to15k", dealbreakers: ["longTravel"] },
+    { person_name: "Aisha", date_windows: [r(f1, 0, 2), r(f2, 0, 2)], destination_types: ["nature", "heritage"], budget_band: "under8k", dealbreakers: ["trekking", "cold"] },
+  ].map((x) => ({ ...x, trip_id: trip.id }));
 
   const { error } = await db().from("responses").insert(responses);
   if (error) throw error;

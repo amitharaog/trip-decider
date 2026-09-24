@@ -17,7 +17,7 @@ export const POST = handle(async (req, ctx: RouteContext<"/api/trips/[id]/admin/
 
   const { data, error } = await db()
     .from("trips")
-    .update({ status: "deciding", date_window: window, options, decided_at: new Date().toISOString() })
+    .update({ status: "deciding", decision: { window, options } })
     .eq("id", trip.id)
     .eq("status", "collecting") // guard against a double click
     .select("*")

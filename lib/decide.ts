@@ -18,7 +18,7 @@ function hitsDealbreaker(d: Destination, r: ResponseRow) {
 }
 
 function budgetFit(d: Destination, r: ResponseRow): Fit {
-  const cap = BUDGETS.find((b) => b.id === r.budget)?.cap ?? 0;
+  const cap = BUDGETS.find((b) => b.id === r.budget_band)?.cap ?? 0;
   if (d.cost[1] <= cap) return "works"; // even the pricier end fits
   if (d.cost[0] <= cap) return "stretch"; // only doable at the cheap end
   return "no";
@@ -47,17 +47,15 @@ function score(d: Destination, rs: ResponseRow[]) {
   return s;
 }
 
-export type Decision = { window: DateWindow | null; options: TripOption[] };
-
 /**
  * 1. Pick the date window most people can make.
  * 2. Drop any destination that hits a dealbreaker for someone who can make it.
  * 3. Score the rest on budget and type fit; keep the top 3.
  * 4. Label every member works / stretch / doesn't work for each option.
  */
-export function decide(members: string[], responses: ResponseRow[], today?: string): Decision {
-  const window = bestWindow(responses.map((r) => ({ member: r.member_name, windows: r.windows })), today);
-  const going = responses.filter((r) => window?.available.includes(r.member_name));
+export function decide(members: string[], responses: ResponseRow[], today?: string): { window: DateWindow | null; options: TripOption[] } {
+  const window = bestWindow(responses.map((r) => ({ member: r.person_name, windows: r.date_windows })), today);
+  const going = responses.filter((r) => window?.available.includes(r.person_name));
 
   const ranked = DESTINATIONS.filter((d) => !going.some((r) => hitsDealbreaker(d, r)))
     .map((d) => ({
@@ -83,7 +81,7 @@ export function decide(members: string[], responses: ResponseRow[], today?: stri
     costLabel: costLabel(d),
     travelLabel: travelLabel(d),
     fits: members.map((member): MemberFit => {
-      const r = responses.find((x) => x.member_name === member);
+      const r = responses.find((x) => x.person_name === member);
       if (!r) return { member, fit: "works", note: "Going with the group" };
       if (!window?.available.includes(member)) return { member, fit: "no", note: "Can't make the dates" };
       return { member, fit: memberFit(d, r) };

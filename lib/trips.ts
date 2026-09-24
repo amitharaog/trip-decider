@@ -1,6 +1,6 @@
 import "server-only";
 import { currentPlan } from "./decide";
-import { fail, isUuid, newToken, safeEqual } from "./http";
+import { fail, isUuid, memberToken, safeEqual } from "./http";
 import { db } from "./supabase";
 import type { ConfirmationRow, PublicTrip, ResponseRow, TripRow } from "./types";
 
@@ -26,27 +26,33 @@ export async function requireAdmin(id: string, token: string | null) {
 export async function getResponses(tripId: string): Promise<ResponseRow[]> {
   const { data, error } = await db()
     .from("responses")
-    .select("member_name, member_token, windows, destination_types, budget, dealbreakers")
+    .select("id, person_name, date_windows, destination_types, budget_band, dealbreakers")
     .eq("trip_id", tripId)
-    .order("created_at");
+    .order("submitted_at");
   if (error) throw error;
   return data as ResponseRow[];
 }
 
-async function getVetoes(tripId: string) {
-  const { data, error } = await db().from("vetoes").select("member_name, option_id").eq("trip_id", tripId);
+export async function getVetoes(tripId: string) {
+  const { data, error } = await db().from("vetoes").select("person_name, option_key").eq("trip_id", tripId);
   if (error) throw error;
-  return data as { member_name: string; option_id: string }[];
+  return data as { person_name: string; option_key: string }[];
 }
 
 export async function getConfirmations(tripId: string): Promise<ConfirmationRow[]> {
   const { data, error } = await db()
     .from("confirmations")
-    .select("member_name, claimed_at, verified, verified_at")
+    .select("person_name, option_key, marked_paid_at, verified")
     .eq("trip_id", tripId)
-    .order("claimed_at");
+    .order("marked_paid_at");
   if (error) throw error;
   return data as ConfirmationRow[];
+}
+
+/** The plan is the first option nobody vetoed. Vetoes stop once someone pays, so it can't move after that. */
+export async function planFor(trip: TripRow) {
+  const vetoes = await getVetoes(trip.id);
+  return { vetoes, plan: currentPlan(trip.decision?.options ?? null, vetoes.map((v) => v.option_key)) };
 }
 
 export type NewTrip = {
@@ -59,48 +65,47 @@ export type NewTrip = {
 };
 
 export async function insertTrip(t: NewTrip) {
-  const id = crypto.randomUUID();
-  const adminToken = newToken();
-  const { error } = await db().from("trips").insert({
-    id,
-    name: t.name,
-    organizer_name: t.organizerName,
-    members: t.members,
-    upi_id: t.upiId,
-    advance_amount: t.advanceAmount,
-    min_confirmations: t.minConfirmations,
-    admin_token: adminToken,
-    status: "collecting",
-  });
+  // id and admin_token come from the column defaults.
+  const { data, error } = await db()
+    .from("trips")
+    .insert({
+      name: t.name,
+      organizer_name: t.organizerName,
+      members: t.members,
+      upi_id: t.upiId,
+      advance_amount: t.advanceAmount,
+      min_confirmations: t.minConfirmations,
+    })
+    .select("id, admin_token")
+    .single();
   if (error) throw error;
-  return { id, adminToken };
+  return { id: data.id as string, adminToken: data.admin_token as string };
 }
 
 /**
  * Everything a group member may see. Budgets, dealbreakers, date ranges and
  * who used a veto are deliberately left out.
  */
-export async function publicState(trip: TripRow, memberName?: string | null, memberToken?: string | null): Promise<PublicTrip> {
-  const [responses, vetoes, confirmations] = await Promise.all([
+export async function publicState(trip: TripRow, memberName?: string | null, token?: string | null): Promise<PublicTrip> {
+  const [responses, { vetoes, plan }, confirmations] = await Promise.all([
     getResponses(trip.id),
-    getVetoes(trip.id),
+    planFor(trip),
     getConfirmations(trip.id),
   ]);
-  const vetoedOptionIds = vetoes.map((v) => v.option_id);
-  const plan = currentPlan(trip.options, vetoedOptionIds);
+  const options = trip.decision?.options ?? null;
 
   let me: PublicTrip["me"] = null;
   if (memberName && trip.members.includes(memberName)) {
-    const response = responses.find((r) => r.member_name === memberName);
-    const isMe = !!response && safeEqual(response.member_token, memberToken);
-    const conf = confirmations.find((c) => c.member_name === memberName);
-    const vetoUsed = isMe && vetoes.some((v) => v.member_name === memberName);
-    const isLastOption = !!plan && trip.options?.at(-1)?.id === plan.id;
+    const response = responses.find((r) => r.person_name === memberName);
+    const isMe = !!response && safeEqual(memberToken(response.id), token);
+    const conf = confirmations.find((c) => c.person_name === memberName);
+    const vetoUsed = isMe && vetoes.some((v) => v.person_name === memberName);
+    const isLastOption = !!plan && options?.at(-1)?.id === plan.id;
     me = {
       name: memberName,
       submitted: !!response,
       vetoUsed,
-      canVeto: trip.status === "deciding" && isMe && !vetoUsed && !conf && !!plan && !isLastOption,
+      canVeto: trip.status === "deciding" && isMe && !vetoUsed && !!plan && !isLastOption,
       paid: !!conf,
       verified: !!conf?.verified,
     };
@@ -112,15 +117,15 @@ export async function publicState(trip: TripRow, memberName?: string | null, mem
     organizerName: trip.organizer_name,
     members: trip.members,
     status: trip.status,
-    submitted: responses.map((r) => r.member_name),
+    submitted: responses.map((r) => r.person_name),
     upiId: trip.upi_id,
     advanceAmount: trip.advance_amount,
     minConfirmations: trip.min_confirmations,
-    dateWindow: trip.date_window,
-    options: trip.options,
-    vetoedOptionIds,
+    dateWindow: trip.decision?.window ?? null,
+    options,
+    vetoedOptionIds: vetoes.map((v) => v.option_key),
     planId: plan?.id ?? null,
-    paid: confirmations.map((c) => ({ member: c.member_name, verified: c.verified })),
+    paid: confirmations.map((c) => ({ member: c.person_name, verified: c.verified })),
     me,
   };
 }
