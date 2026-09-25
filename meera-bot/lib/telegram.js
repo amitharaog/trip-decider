@@ -28,6 +28,14 @@ export async function sendMessage(chatId, text, replyTo) {
   return ids;
 }
 
+// Downloads a file the user sent (e.g. a voice note). Bots can fetch files up to 20 MB.
+export async function downloadFile(fileId) {
+  const file = await call("getFile", { file_id: fileId });
+  const res = await fetch(`https://api.telegram.org/file/bot${config.telegramToken}/${file.file_path}`);
+  if (!res.ok) throw new Error(`Telegram file download ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export function sendTyping(chatId) {
   return call("sendChatAction", { chat_id: chatId, action: "typing" }).catch(() => {});
 }

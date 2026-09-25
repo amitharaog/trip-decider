@@ -1,16 +1,39 @@
 // Every setting comes from environment variables (Vercel project settings, or .env locally).
+// Read on use (not at import), so tests and scripts can set variables first.
 export const config = {
-  telegramToken: process.env.TELEGRAM_BOT_TOKEN,
-  webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || "",
-  allowedChatId: process.env.ALLOWED_CHAT_ID || "",
-  geminiKey: process.env.GEMINI_API_KEY,
-  geminiModel: process.env.GEMINI_MODEL || "gemini-flash-latest",
-  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL ?? "gemini-flash-lite-latest",
-  anthropicKey: process.env.ANTHROPIC_API_KEY,
-  claudeModel: process.env.CLAUDE_MODEL || "claude-opus-5",
-  minScore: Number(process.env.MIN_SCORE || 6),
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  get telegramToken() {
+    return process.env.TELEGRAM_BOT_TOKEN;
+  },
+  get webhookSecret() {
+    return process.env.TELEGRAM_WEBHOOK_SECRET || "";
+  },
+  get allowedChatId() {
+    return process.env.ALLOWED_CHAT_ID || "";
+  },
+  get geminiKey() {
+    return process.env.GEMINI_API_KEY;
+  },
+  get geminiModel() {
+    return process.env.GEMINI_MODEL || "gemini-flash-latest";
+  },
+  get geminiFallbackModel() {
+    return process.env.GEMINI_FALLBACK_MODEL ?? "gemini-flash-lite-latest";
+  },
+  get anthropicKey() {
+    return process.env.ANTHROPIC_API_KEY;
+  },
+  get claudeModel() {
+    return process.env.CLAUDE_MODEL || "claude-opus-5";
+  },
+  get minScore() {
+    return Number(process.env.MIN_SCORE || 6);
+  },
+  get supabaseUrl() {
+    return process.env.SUPABASE_URL;
+  },
+  get supabaseKey() {
+    return process.env.SUPABASE_SERVICE_ROLE_KEY;
+  },
 };
 
 // Which model writes the draft: DRAFT_MODEL wins, otherwise Claude when a key exists.

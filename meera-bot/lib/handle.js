@@ -1,9 +1,10 @@
 import { config } from "./config.js";
 import { createStore } from "./store.js";
-import { sendMessage, sendTyping } from "./telegram.js";
+import { sendMessage, sendTyping, downloadFile } from "./telegram.js";
+import { transcribe } from "./llm.js";
 import { processNote, rejectionMessage, draftMessage } from "./pipeline.js";
 
-const HELP = `Send me a note (text) and I'll:
+const HELP = `Send me a note (text or a voice note) and I'll:
 1. score it 0-10 — below ${config.minScore} I tell you why and stop
 2. look for a current news angle
 3. send back a LinkedIn draft in your voice
@@ -25,9 +26,12 @@ export function routeUpdate(update, store = createStore()) {
     return null;
   }
 
+  const audio = msg.voice || msg.audio;
+  if (audio) return handleVoice({ store, chatId, msg, audio, updateId: update.update_id });
+
   const text = (msg.text || msg.caption || "").trim();
   if (!text) {
-    return sendMessage(chatId, "I can only read text for now. Paste the note (or use Telegram's voice-to-text) and send it again.", msg.message_id);
+    return sendMessage(chatId, "I can read text and voice notes. Send the note as either and I'll take it from there.", msg.message_id);
   }
   if (/^\/(start|help)\b/.test(text)) return sendMessage(chatId, HELP);
   if (/^\/id\b/.test(text)) return sendMessage(chatId, `This chat's id is ${chatId}`);
@@ -36,6 +40,23 @@ export function routeUpdate(update, store = createStore()) {
   if (decision) return handleDecision({ store, chatId, msg, decision });
 
   return handleNote({ store, chatId, msg, text, updateId: update.update_id });
+}
+
+async function handleVoice({ store, chatId, msg, audio, updateId }) {
+  await sendTyping(chatId);
+  let text;
+  try {
+    const data = await downloadFile(audio.file_id);
+    text = (await transcribe(data, audio.mime_type || "audio/ogg")).trim();
+  } catch (err) {
+    console.error("transcription failed", err);
+    return sendMessage(chatId, `I couldn't transcribe that voice note, so there's no draft. Try again, or paste it as text.\n\n(${err.message})`, msg.message_id);
+  }
+  if (!text || text === "[no speech]") {
+    return sendMessage(chatId, "I couldn't hear any speech in that voice note.", msg.message_id);
+  }
+  await sendMessage(chatId, `🎙 Heard:\n${text}`, msg.message_id);
+  return handleNote({ store, chatId, msg, text, updateId });
 }
 
 async function handleNote({ store, chatId, msg, text, updateId }) {

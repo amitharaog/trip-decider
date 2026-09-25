@@ -70,7 +70,7 @@ function decode(s) {
 // The flag every draft that uses a news item must carry. Not optional:
 // Meera is the author of any claim that gets published.
 export function verifyBlock(news) {
-  const rule = "─────────────────────────────────";
+  const rule = "────────────────";
   return [
     rule,
     `NEWS SOURCE: ${news.title}`,
@@ -83,7 +83,7 @@ export function verifyBlock(news) {
 
 // Shown when a news item was found but the draft didn't use it.
 export function relatedBlock(news) {
-  const rule = "─────────────────────────────────";
+  const rule = "────────────────";
   return [
     rule,
     `RELATED NEWS (not used in this draft): ${news.title}`,

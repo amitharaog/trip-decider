@@ -129,3 +129,35 @@ test("APPROVE as a reply updates that draft", async () => {
   assert.deepEqual(updates, [["draft", 7, "rejected", "too long"], ["note", 3, "rejected"]]);
   assert.match(sent[0].text, /Rejected draft #7/);
 });
+
+test("voice note is transcribed, echoed, then run as a note", async () => {
+  process.env.TELEGRAM_BOT_TOKEN = "t";
+  process.env.GEMINI_API_KEY = "g";
+  const sent = [];
+  const geminiBodies = [];
+  globalThis.fetch = async (url, init) => {
+    url = String(url);
+    if (url.includes("/getFile")) return { json: async () => ({ ok: true, result: { file_path: "voice/1.oga" } }) };
+    if (url.includes("/file/bot")) return { ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer };
+    if (url.includes("generativelanguage")) {
+      const body = JSON.parse(init.body);
+      geminiBodies.push(body);
+      const isAudio = body.contents[0].parts.some((p) => p.inline_data);
+      const text = isAudio ? "Call the courier at four." : JSON.stringify({ score: 1, reason: "Just a reminder." });
+      return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }) };
+    }
+    if (url.includes("api.telegram.org")) {
+      sent.push(JSON.parse(init.body));
+      return { json: async () => ({ ok: true, result: { message_id: 1 } }) };
+    }
+    throw new Error("unexpected " + url);
+  };
+  const store = { enabled: false, saveNote: async () => ({ id: null }), updateNote: async () => {} };
+  await routeUpdate({ update_id: 9, message: { message_id: 3, chat: { id: 5 }, voice: { file_id: "abc", mime_type: "audio/ogg" } } }, store);
+  const audioPart = geminiBodies[0].contents[0].parts[0].inline_data;
+  assert.equal(audioPart.mime_type, "audio/ogg");
+  assert.equal(audioPart.data, "AQID");
+  const texts = sent.filter((m) => m.text).map((m) => m.text);
+  assert.match(texts[0], /Heard:\nCall the courier at four\./);
+  assert.match(texts[1], /Not drafted \(score 1\/10\)/);
+});
