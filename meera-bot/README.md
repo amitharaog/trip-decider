@@ -69,4 +69,4 @@ npm run set-webhook -- https://<your-project>.vercel.app
 
 - **Too many notes pass?** Tighten `SCORE_SYSTEM` in `lib/prompts.js`, or raise `MIN_SCORE`. If everything passes, the scoring prompt is too lenient.
 - **Drafts sound generic?** Edit `voice-skill.txt`. To change the voice without redeploying, insert a row into `voice_skill` with `active = true`. The newest active row wins.
-- **Models:** `GEMINI_MODEL` (default `gemini-2.5-flash`), `CLAUDE_MODEL` (default `claude-opus-5`), `DRAFT_MODEL=gemini|claude`.
+- **Models:** `GEMINI_MODEL` (default `gemini-flash-latest`, falls back to `GEMINI_FALLBACK_MODEL`, default `gemini-flash-lite-latest`, when busy or over quota), `CLAUDE_MODEL` (default `claude-opus-5`), `DRAFT_MODEL=gemini|claude`.
