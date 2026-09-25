@@ -105,10 +105,18 @@ export default function MemberView({ initial }: { initial: PublicTrip }) {
       <>
         {header}
         <Card>
-          <h2 className="mb-3 text-lg font-bold">Who are you?</h2>
+          <h2 className="text-lg font-bold">Who are you?</h2>
+          <p className="mb-3 text-sm text-stone-600">
+            {trip.status === "collecting" ? "Names with a ✓ have already answered." : "Pick your name to see the plan."}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {trip.members.map((m) => (
-              <Button key={m} variant="secondary" onClick={() => choose(m)}>
+              <Button
+                key={m}
+                variant="secondary"
+                onClick={() => choose(m)}
+                className={trip.status === "collecting" && trip.submitted.includes(m) ? "text-stone-500" : ""}
+              >
                 {m}
                 {trip.submitted.includes(m) && <span className="ml-1 text-green-600">✓</span>}
               </Button>
@@ -137,7 +145,9 @@ export default function MemberView({ initial }: { initial: PublicTrip }) {
           />
         ) : (
           <>
-            {trip.status === "collecting" && <Waiting trip={trip} />}
+            {trip.status === "collecting" && (
+              <Waiting trip={trip} name={me} fromThisPhone={!!read(tokenKey(trip.id, me))} />
+            )}
             {trip.status !== "collecting" && meState && (
               <OptionsView trip={trip} me={meState} token={read(tokenKey(trip.id, me))} onChange={() => refresh(me)} />
             )}
@@ -149,10 +159,17 @@ export default function MemberView({ initial }: { initial: PublicTrip }) {
   );
 }
 
-function Waiting({ trip }: { trip: PublicTrip }) {
+function Waiting({ trip, name, fromThisPhone }: { trip: PublicTrip; name: string; fromThisPhone: boolean }) {
   return (
     <Card className="border-green-200 bg-green-50">
-      <h2 className="text-lg font-bold text-green-900">Your answers are locked in ✓</h2>
+      <h2 className="text-lg font-bold text-green-900">
+        {fromThisPhone ? "Your answers are locked in ✓" : `${name} has already answered ✓`}
+      </h2>
+      {!fromThisPhone && (
+        <p className="mt-1 text-sm text-green-800">
+          Answers can&apos;t be changed. Not {name}? Tap &ldquo;not you?&rdquo; above and pick your own name.
+        </p>
+      )}
       <p className="mt-1 text-sm text-green-800">
         {trip.organizerName} will close collection and show the options soon. Anyone who hasn&apos;t answered by then
         goes with the group&apos;s pick.
