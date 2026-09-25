@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate project (Meera Telegram bot), deployed on its own.
+    "meera-bot/**",
   ]),
 ]);
 

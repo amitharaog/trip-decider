@@ -1,0 +1,19 @@
+{
+  "name": "meera-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram bot that turns Meera's notes into LinkedIn drafts in her voice, for her to approve.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "try": "node --env-file=.env scripts/try-note.js",
+    "compare": "node --env-file=.env scripts/compare.js",
+    "set-webhook": "node --env-file=.env scripts/set-webhook.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@supabase/supabase-js": "^2.117.1",
+    "@vercel/functions": "^3.9.9"
+  }
+}
