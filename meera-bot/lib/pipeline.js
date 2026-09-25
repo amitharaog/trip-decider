@@ -1,6 +1,6 @@
 import { config, draftModel } from "./config.js";
 import { gemini, claude } from "./llm.js";
-import { findNews, verifyBlock } from "./news.js";
+import { findNews, verifyBlock, relatedBlock } from "./news.js";
 import { loadVoice } from "./voice.js";
 import { SCORE_SYSTEM, KEYWORDS_SYSTEM, draftSystem, draftPrompt } from "./prompts.js";
 
@@ -18,8 +18,8 @@ export async function scoreNote(text, s = services) {
 // Step 2: find something current to hang it on.
 export async function newsFor(text, s = services) {
   try {
-    const { query } = await s.gemini({ system: KEYWORDS_SYSTEM, prompt: text, json: true, temperature: 0 });
-    const news = await s.findNews(query);
+    const { query, keywords = [] } = await s.gemini({ system: KEYWORDS_SYSTEM, prompt: text, json: true, temperature: 0 });
+    const news = await s.findNews(query, keywords);
     return { query, news };
   } catch (err) {
     console.error("news lookup failed", err);
@@ -46,8 +46,14 @@ export async function processNote(text, { store, s = services, minScore = config
   }
   const { query, news } = await newsFor(text, s);
   const draft = await writeDraft(text, news, { store, s });
-  const body = draft.usedNews ? `${draft.post}\n\n${verifyBlock(news)}` : draft.post;
-  return { kind: "draft", score, reason, query, news: draft.usedNews ? news : null, body, model: draft.model };
+  // Every draft says what the news step found, so Meera can see it and check it.
+  const footer = !news
+    ? `(News: nothing found on Google News for "${query || "this note"}")`
+    : draft.usedNews
+      ? verifyBlock(news)
+      : relatedBlock(news);
+  const body = `${draft.post}\n\n${footer}`;
+  return { kind: "draft", score, reason, query, news, usedNews: draft.usedNews, body, model: draft.model };
 }
 
 export function rejectionMessage({ score, reason }) {

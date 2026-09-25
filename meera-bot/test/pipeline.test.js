@@ -54,12 +54,38 @@ test("good note gets news, voice and the verify flag", async () => {
   assert.match(draftMessage(r, 12), /DRAFT #12 · score 8\/10/);
 });
 
-test("no verify flag when the draft ignores the news", async () => {
+test("unused news is still attached as related news", async () => {
   process.env.DRAFT_MODEL = "gemini";
   const { s } = fakeServices({ score: 7, usedNews: "NO" });
   const r = await processNote("note", { s, minScore: 6 });
-  assert.equal(r.news, null);
+  assert.equal(r.usedNews, false);
   assert.doesNotMatch(r.body, /NEWS SOURCE/);
+  assert.match(r.body, /RELATED NEWS \(not used in this draft\): CDSCO/);
+  assert.match(r.body, /LINK: https:\/\/example.com\/a/);
+});
+
+test("says so when no news was found", async () => {
+  process.env.DRAFT_MODEL = "gemini";
+  const { s } = fakeServices({ score: 7, news: null });
+  const r = await processNote("note", { s, minScore: 6 });
+  assert.match(r.body, /News: nothing found on Google News for "cosmetic supplier formula change"/);
+});
+
+test("widens the search until Google News returns something", async () => {
+  const { findNews } = await import("../lib/news.js");
+  const seen = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const q = new URL(url).searchParams.get("q");
+    seen.push(q);
+    const hit = q === "supplier formula";
+    return { ok: true, text: async () => (hit ? `<item><title>Hit - Mint</title><link>https://x</link><pubDate>Mon, 22 Sep 2026 08:00:00 GMT</pubDate><source url="m">Mint</source></item>` : "<rss></rss>") };
+  };
+  const n = await findNews("supplier formula change", ["cosmetics"]);
+  globalThis.fetch = real;
+  assert.deepEqual(seen, ["supplier formula change when:30d", "supplier formula change", "supplier formula"]);
+  assert.equal(n.title, "Hit");
+  assert.equal(n.searchedFor, "supplier formula");
 });
 
 test("DRAFT_MODEL=claude drafts with Claude", async () => {

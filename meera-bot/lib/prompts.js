@@ -14,7 +14,7 @@ Be strict. Most raw notes are not posts yet. When unsure between two bands, pick
 
 Reply with JSON only: {"score": <integer 0-10>, "reason": "<one sentence, addressed to Meera, saying why>"}`;
 
-export const KEYWORDS_SYSTEM = `You turn a note into a Google News search. Pull 3-5 search terms from the note and combine them into one short search phrase (2-5 words) likely to find a recent news article or industry data point on the same topic. Prefer the industry-level topic over the specific incident (e.g. "cosmetic ingredient supplier labelling" not "batch fourteen").
+export const KEYWORDS_SYSTEM = `You turn a note into a Google News search. Pull 3-5 search terms from the note and combine them into one short search phrase (2-5 words) likely to find a recent news article or industry data point on the same topic. Prefer the industry-level topic over the specific incident (e.g. "cosmetic ingredient supplier labelling" not "batch fourteen"). Keywords should be single common words or short phrases a news headline would use (e.g. "skincare", "sunscreen", "cosmetics regulation").
 
 Reply with JSON only: {"keywords": ["...", "..."], "query": "<short search phrase>"}`;
 
@@ -40,7 +40,7 @@ Headline: ${news.title}
 Source: ${news.source} · ${news.date}
 Summary: ${news.summary}
 
-If this news item is genuinely relevant, use it to make the post timely. If it doesn't fit naturally, ignore it.`
+If this news item is genuinely relevant, use it to make the post timely: connect it to her point in one or two sentences, name the publication, and don't add anything the summary doesn't say. If it is about a clearly different topic, ignore it.`
     : "No news item was found for this note. Write the post from the note alone.";
   return `MEERA'S NOTE:
 ${note}
