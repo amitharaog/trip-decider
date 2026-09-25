@@ -96,12 +96,12 @@ function PlanCard({ trip, plan, me, token, onChange }: { trip: PublicTrip; plan:
   }
 
   let vetoNote: string;
-  if (trip.status !== "deciding") vetoNote = "Someone has paid, so the plan is final.";
+  if (trip.status !== "deciding") vetoNote = `${trip.organizerName} has finalised the plan.`;
   else if (me.vetoUsed) vetoNote = "You've used your veto.";
   else if (isLast) vetoNote = "This is the last option, so it can't be vetoed.";
   else if (!me.submitted) vetoNote = "You didn't submit preferences, so you're going with the group's pick.";
   else if (!me.canVeto) vetoNote = "Veto from the phone you submitted your answers on.";
-  else vetoNote = "You have one veto for the whole trip. Vetoes are anonymous and close as soon as anyone pays.";
+  else vetoNote = `You have one veto for the whole trip. Vetoes are anonymous and close when ${trip.organizerName} finalises the plan.`;
 
   return (
     <Card className="border-2 border-brand-500">
@@ -159,12 +159,15 @@ function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; ve
       </h2>
       <p className="text-sm text-stone-600">
         The trip locks when {trip.minConfirmations} people have paid. Saying yes doesn&apos;t count until you&apos;ve paid.
-        {trip.status === "deciding" && " The first payment makes the plan final and closes vetoes."}
       </p>
 
       <Progress value={verified.length} max={trip.minConfirmations} />
 
-      {me.verified ? (
+      {trip.status === "deciding" ? (
+        <p className="mt-3 rounded-xl bg-stone-50 px-3 py-3 text-sm text-stone-700">
+          Payments open once {trip.organizerName} finalises the plan. Until then, vetoes can still change it.
+        </p>
+      ) : me.verified ? (
         <p className="mt-3 rounded-xl bg-green-50 px-3 py-3 font-semibold text-green-800">You&apos;re in ✓ Payment verified.</p>
       ) : me.paid ? (
         <p className="mt-3 rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-900">

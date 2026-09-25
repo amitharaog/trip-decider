@@ -117,7 +117,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
           {trip.dateWindow && plan && (
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-                {trip.status === "deciding" ? "The plan · vetoes open until someone pays" : "The plan · final"}{trip.vetoedOptionIds.length > 0 && ` · ${trip.vetoedOptionIds.length} vetoed`}
+                {trip.status === "deciding" ? "The plan · vetoes open" : "The plan · final"}{trip.vetoedOptionIds.length > 0 && ` · ${trip.vetoedOptionIds.length} vetoed`}
               </p>
               <h2 className="text-xl font-bold">{plan.name}</h2>
               <p className="text-stone-700">{formatRange(trip.dateWindow.start, trip.dateWindow.end)}</p>
@@ -125,6 +125,23 @@ export default function AdminView({ initial }: { initial: AdminState }) {
                 {plan.costLabel} · {plan.travelLabel}
               </p>
               <FitList fits={plan.fits} />
+              {trip.status === "deciding" && (
+                <div className="mt-3 border-t border-stone-100 pt-3">
+                  <p className="mb-2 text-sm text-stone-600">
+                    Members can still veto this. When you&apos;re happy to go ahead, finalise it. Vetoes close and
+                    everyone can pay the advance.
+                  </p>
+                  <Button
+                    className="w-full"
+                    disabled={!!busy}
+                    onClick={() => {
+                      if (window.confirm(`Finalise ${plan.name}? Nobody can veto after this, and payments open.`)) act("finalize", "finalize");
+                    }}
+                  >
+                    {busy === "finalize" ? "Finalising…" : "Finalise plan & open payments"}
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
 
@@ -133,7 +150,9 @@ export default function AdminView({ initial }: { initial: AdminState }) {
             <p className="text-sm text-stone-600">Check your UPI app, then verify each payment you&apos;ve received.</p>
             <Progress value={verifiedCount} max={trip.minConfirmations} />
             {trip.confirmations.length === 0 ? (
-              <p className="mt-3 text-sm text-stone-500">Nobody has marked themselves as paid yet.</p>
+              <p className="mt-3 text-sm text-stone-500">
+                {trip.status === "deciding" ? "Payments open after you finalise the plan." : "Nobody has marked themselves as paid yet."}
+              </p>
             ) : (
               <ul className="mt-3 divide-y divide-stone-100">
                 {trip.confirmations.map((c) => (

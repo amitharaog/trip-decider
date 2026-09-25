@@ -1,7 +1,7 @@
 export type DestinationType = "beach" | "mountains" | "heritage" | "nature";
 export type Budget = "under8k" | "8to15k" | "15to25k" | "25kplus";
 export type Dealbreaker = "longTravel" | "flights" | "trekking" | "party" | "cold";
-// collecting → deciding (options out, vetoes open) → confirming (first payment: plan fixed) → locked
+// collecting → deciding (options out, vetoes open) → confirming (organizer finalised the plan; payments open) → locked
 export type TripStatus = "collecting" | "deciding" | "confirming" | "locked";
 export type Fit = "works" | "stretch" | "no";
 

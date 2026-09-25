@@ -10,9 +10,9 @@ Next.js (App Router, TypeScript) · Tailwind · Supabase · deploys to Vercel. M
 2. **Members** pick their name and submit dates, place types, budget and dealbreakers once. Answers lock on submit.
 3. **Organizer closes collection.** The app picks the date window and the top 3 destinations, and freezes them.
 4. **The plan** is option 1 unless someone vetoes it. Each member gets one anonymous veto, and the last option can't be vetoed.
-5. **Commit:** members pay the advance with a UPI link and tap "I've paid". The first payment makes the plan final and closes vetoes. The organizer verifies each payment, and once the minimum is verified the trip locks and shows **Trip is on**.
+5. **Commit:** members pay the advance with a UPI link and tap "I've paid". Payments open only after the organizer taps "Finalise plan & open payments" on the admin page, which also closes vetoes. The organizer verifies each payment, and once the minimum is verified the trip locks and shows **Trip is on**.
 
-Trip status goes `collecting` → `deciding` (options out, vetoes open) → `confirming` (first payment, plan final) → `locked`.
+Trip status goes `collecting` → `deciding` (options out, vetoes open) → `confirming` (organizer finalised the plan, payments open) → `locked`.
 
 "Load demo trip" on `/` creates Riya's trip with Siddharth, Karan and Aisha already answered. Preethi hasn't answered yet, so you can fill in her form.
 

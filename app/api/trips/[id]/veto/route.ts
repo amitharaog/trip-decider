@@ -10,7 +10,7 @@ export const POST = handle(async (req, ctx: RouteContext<"/api/trips/[id]/veto">
   const optionKey = typeof body.optionId === "string" ? body.optionId : "";
 
   if (trip.status === "collecting") fail(409, "Options aren't open yet");
-  if (trip.status !== "deciding") fail(409, "Someone has paid, so the plan is final and vetoes are closed");
+  if (trip.status !== "deciding") fail(409, `${trip.organizer_name} has finalised the plan, so vetoes are closed`);
   const response = (await getResponses(trip.id)).find((r) => r.person_name === member);
   if (!response) fail(403, "Only people who submitted preferences get a veto");
   if (!safeEqual(memberToken(response.id), req.headers.get("x-member-token"))) fail(403, "Veto from the phone you submitted your answers on");
