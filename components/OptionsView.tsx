@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { api, rupees, upiLink } from "@/lib/api";
+import { api, rupees } from "@/lib/api";
 import { formatRange } from "@/lib/dates";
 import { HOME_CITY } from "@/lib/destinations";
 import type { PublicTrip, TripOption } from "@/lib/types";
 import FitList, { FitSummary } from "./FitList";
+import UpiPay from "./UpiPay";
 import { Button, Card, ErrorNote } from "./ui";
 
 type Me = NonNullable<PublicTrip["me"]>;
@@ -135,7 +136,6 @@ function PlanCard({ trip, plan, me, token, onChange }: { trip: PublicTrip; plan:
 function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; verified: string[]; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const link = trip.upiId ? upiLink(trip.upiId, trip.organizerName, trip.advanceAmount, `${trip.name} advance`) : null;
   const pending = trip.paid.filter((p) => !p.verified).map((p) => p.member);
 
   async function markPaid() {
@@ -175,18 +175,8 @@ function Commit({ trip, me, verified, onChange }: { trip: PublicTrip; me: Me; ve
         </p>
       ) : (
         <div className="mt-3 space-y-2">
-          {link ? (
-            <>
-              <a
-                href={link}
-                className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-600 px-4 font-semibold text-white active:bg-brand-700"
-              >
-                Pay {rupees(trip.advanceAmount)} with UPI
-              </a>
-              <p className="text-center text-xs text-stone-500">
-                Opens GPay / PhonePe / Paytm. Or pay to <span className="font-mono">{trip.upiId}</span>
-              </p>
-            </>
+          {trip.upiId ? (
+            <UpiPay upiId={trip.upiId} payee={trip.organizerName} amount={trip.advanceAmount} note={`${trip.name} advance`} />
           ) : (
             <p className="text-sm text-stone-600">Ask {trip.organizerName} for their UPI ID and pay them directly.</p>
           )}
