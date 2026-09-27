@@ -26,7 +26,8 @@ Trip status goes `collecting` → `deciding` (options out, vetoes open) → `con
 ## Decision rules (`lib/decide.ts`, `lib/dates.ts`)
 
 - **Dates:** every 3- and 4-day window starting 7–92 days out. A member can make it only if it fits inside one of their ranges. Windows are ranked by most people, then most weekend days, then longer trip, then earliest.
-- **Filter:** drop destinations that hit any dealbreaker of anyone who can make the dates (travel > 8h, flight, trekking, party, cold).
+- **Where:** the organizer either lets the app suggest from all destinations, or picks 1–5 places (`trips.destinations`). With a pick, each friend is first asked "Riya is keen on Wayanad. Are you in?" If they say no, they choose up to 3 places they'd rather go (`responses.wants`). Candidates are the organizer's places plus everyone's suggestions; nothing is dropped for dealbreakers (it just shows "doesn't work"), and fewest "doesn't work" ranks first. A place someone didn't ask for is at best a *stretch* for them. Without a pick, friends can optionally name places they'd love; each "want" adds +4 to that place's score. Options show how many people want them, never who.
+- **Filter (no pick):** drop destinations that hit any dealbreaker of anyone who can make the dates (travel > 8h, flight, trekking, party, cold).
 - **Budget fit** (against the top of the member's band): works if the destination's high cost fits, stretch if only its low cost fits, otherwise doesn't work.
 - **Type fit:** a type mismatch makes it a stretch. The label is the worse of budget and type fit.
 - **Score:** budget works +3, stretch +1, doesn't work −3; type match +2. Ties go to fewer "doesn't work", then cheaper, then shorter travel.
@@ -44,11 +45,15 @@ Destinations are hardcoded in `lib/destinations.ts`, with travel times from Beng
 
 ## Database
 
-The app uses the existing `trips`, `responses`, `vetoes` and `confirmations` tables. It adds one column: run `supabase/migration.sql` in the Supabase SQL editor.
+The app uses the existing `trips`, `responses`, `vetoes` and `confirmations` tables. It adds three columns: run `supabase/migration.sql` in the Supabase SQL editor.
 
 ```sql
 alter table trips add column if not exists decision jsonb;
+alter table trips add column if not exists destinations text[];
+alter table responses add column if not exists wants text[];
 ```
+
+Trips without a place pick keep working before the last two columns exist; picking places needs them.
 
 ## Deploy to Vercel
 

@@ -41,6 +41,7 @@ export type TripRow = {
   admin_token: string;
   status: TripStatus;
   decision: Decision | null; // added by supabase/migration.sql
+  destinations?: string[] | null; // organizer's shortlist, added by supabase/migration.sql
   created_at: string;
 };
 
@@ -51,6 +52,7 @@ export type ResponseRow = {
   destination_types: DestinationType[];
   budget_band: Budget;
   dealbreakers: Dealbreaker[];
+  wants?: string[] | null; // places this person would like to go; added by supabase/migration.sql
 };
 
 export type DateWindow = {
@@ -74,6 +76,7 @@ export type TripOption = {
   blurb: string;
   costLabel: string;
   travelLabel: string;
+  votes?: number; // how many people want this place (never who)
   fits: MemberFit[];
 };
 
@@ -95,6 +98,7 @@ export type PublicTrip = {
   upiId: string | null;
   advanceAmount: number;
   minConfirmations: number;
+  shortlist: string[] | null; // destination ids the organizer picked; null = app suggests
   dateWindow: DateWindow | null;
   options: TripOption[] | null;
   vetoedOptionIds: string[];

@@ -2,17 +2,27 @@
 
 import { useState } from "react";
 import { api, rupees } from "@/lib/api";
+import { DESTINATIONS, MAX_SHORTLIST } from "@/lib/destinations";
+import { typeArt } from "./Destination";
 import { Avatar, Button, Card, ErrorNote, Eyebrow, Field, LinkBox, WhatsAppButton, inputClass } from "./ui";
 
 type Created = { id: string; adminToken: string; name: string };
 const DEMO_NAME = "Finally, the long weekend";
 const ADVANCES = [1000, 2000, 3000, 5000];
-const STEPS = ["The trip", "The crew", "The commitment"] as const;
+const STEPS = ["The trip", "Where to?", "The crew", "The commitment"] as const;
+
+/** A destination named in the trip title, e.g. "Wayanad weekend" → Wayanad. */
+function placeInName(name: string) {
+  const n = name.toLowerCase();
+  return DESTINATIONS.find((d) => n.includes(d.id) || n.includes(d.name.toLowerCase().split(/[ ,&]/)[0]));
+}
 
 export default function CreateTrip() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [organizerName, setOrganizerName] = useState("");
+  // null = let the app suggest from every place; otherwise the organizer's shortlist.
+  const [places, setPlaces] = useState<string[] | null>(null);
   const [members, setMembers] = useState(["", "", "", ""]);
   const [upiId, setUpiId] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState(2000);
@@ -25,19 +35,25 @@ export default function CreateTrip() {
   const crew = [organizerName.trim() || "You", ...friends];
   const minOk = Math.min(Math.max(1, minConfirmations), crew.length);
 
-  const canNext = [name.trim() && organizerName.trim(), friends.length > 0, upiId.trim() && advanceAmount > 0][step];
+  const canNext = [name.trim() && organizerName.trim(), places === null || places.length > 0, friends.length > 0, upiId.trim() && advanceAmount > 0][step];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (step < STEPS.length - 1) {
-      if (canNext) setStep(step + 1);
+      if (!canNext) return;
+      // Trip called "Wayanad trip"? Start the next step with Wayanad picked.
+      if (step === 0 && places === null) {
+        const named = placeInName(name);
+        if (named) setPlaces([named.id]);
+      }
+      setStep(step + 1);
       return;
     }
     setBusy("create");
     setError(null);
     try {
       const res = await api<{ id: string; adminToken: string }>("/api/trips", {
-        body: { name, organizerName, members: friends, upiId, advanceAmount, minConfirmations: minOk },
+        body: { name, organizerName, members: friends, upiId, advanceAmount, minConfirmations: minOk, destinations: places ?? [] },
       });
       setCreated({ ...res, name });
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -69,9 +85,9 @@ export default function CreateTrip() {
       <form onSubmit={submit}>
         <Card flush>
           <div className="border-b border-slate-100 bg-gradient-to-br from-brand-50 to-white px-5 py-5 sm:px-7">
-            <Eyebrow className="text-brand-600">Plan a trip · step {step + 1} of 3</Eyebrow>
+            <Eyebrow className="text-brand-600">Plan a trip · step {step + 1} of {STEPS.length}</Eyebrow>
             <h2 className="mt-1 text-2xl font-extrabold">{STEPS[step]}</h2>
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {STEPS.map((s, i) => (
                 <button
                   key={s}
@@ -97,7 +113,70 @@ export default function CreateTrip() {
             )}
 
             {step === 1 && (
-              <div key="s1" className="animate-rise">
+              <div key="s1" className="animate-rise space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { on: places === null, label: "Let the app suggest", sub: `Top 3 from ${DESTINATIONS.length} places`, icon: "✨", click: () => setPlaces(null) },
+                    { on: places !== null, label: "I know where", sub: `Pick 1 to ${MAX_SHORTLIST} places`, icon: "📍", click: () => places === null && setPlaces([]) },
+                  ].map((o) => (
+                    <button
+                      key={o.label}
+                      type="button"
+                      aria-pressed={o.on}
+                      onClick={o.click}
+                      className={`rounded-3xl border p-4 text-left transition active:scale-[0.98] ${o.on ? "border-brand-500 bg-brand-50 ring-4 ring-brand-100" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+                    >
+                      <span className="text-2xl" aria-hidden>{o.icon}</span>
+                      <span className="mt-1 block text-sm font-extrabold">{o.label}</span>
+                      <span className="block text-xs text-slate-500">{o.sub}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {places === null ? (
+                  <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    Everyone&apos;s budget, place type and dealbreakers decide the top 3. Good when the group hasn&apos;t picked anywhere yet.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-slate-600">
+                      {places.length === 0
+                        ? "Tap the places that are on the table."
+                        : `Friends are asked "${organizerName.trim() || "You"} is keen on ${places.length === 1 ? DESTINATIONS.find((d) => d.id === places[0])?.name : "these places"}. Are you in?" Anyone who says no picks where they'd rather go, and the app ranks it all.`}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {DESTINATIONS.map((d) => {
+                        const on = places.includes(d.id);
+                        const full = !on && places.length >= MAX_SHORTLIST;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            aria-pressed={on}
+                            disabled={full}
+                            onClick={() => setPlaces(on ? places.filter((x) => x !== d.id) : [...places, d.id])}
+                            className={`relative rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.98] disabled:opacity-40 ${
+                              on ? "border-brand-500 bg-brand-50 ring-4 ring-brand-100" : "border-slate-200 bg-white hover:bg-slate-50"
+                            }`}
+                          >
+                            <span className="block truncate text-sm font-bold">
+                              <span aria-hidden>{typeArt(d.type).emoji}</span> {d.name}
+                            </span>
+                            <span className="block truncate text-[11px] text-slate-500">
+                              ₹{d.cost[0] / 1000}–{d.cost[1] / 1000}k · ~{d.travelHours}h
+                            </span>
+                            {on && <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {step === 2 && (
+              <div key="s2" className="animate-rise">
                 <p className="mb-3 text-sm text-slate-600">Who&apos;s coming? Just first names, as they&apos;ll recognise them.</p>
                 <div className="space-y-2">
                   {members.map((m, i) => (
@@ -140,8 +219,8 @@ export default function CreateTrip() {
               </div>
             )}
 
-            {step === 2 && (
-              <div key="s2" className="animate-rise space-y-6">
+            {step === 3 && (
+              <div key="s3" className="animate-rise space-y-6">
                 <Field label="Your UPI ID" hint="Friends pay the advance straight to you. No payment gateway, no fees.">
                   <input
                     className={inputClass}
@@ -214,7 +293,7 @@ export default function CreateTrip() {
                 </Button>
               )}
               <Button type="submit" className="flex-1" disabled={!canNext || !!busy}>
-                {step < 2 ? "Continue →" : busy === "create" ? "Creating…" : "Create trip 🎉"}
+                {step < STEPS.length - 1 ? "Continue →" : busy === "create" ? "Creating…" : "Create trip 🎉"}
               </Button>
             </div>
           </div>

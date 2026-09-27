@@ -26,7 +26,7 @@ export async function requireAdmin(id: string, token: string | null) {
 export async function getResponses(tripId: string): Promise<ResponseRow[]> {
   const { data, error } = await db()
     .from("responses")
-    .select("id, person_name, date_windows, destination_types, budget_band, dealbreakers")
+    .select("*") // includes wants once the migration adds it
     .eq("trip_id", tripId)
     .order("submitted_at");
   if (error) throw error;
@@ -62,6 +62,7 @@ export type NewTrip = {
   upiId: string;
   advanceAmount: number;
   minConfirmations: number;
+  destinations?: string[]; // empty or missing = let the app suggest
 };
 
 export async function insertTrip(t: NewTrip) {
@@ -75,9 +76,13 @@ export async function insertTrip(t: NewTrip) {
       upi_id: t.upiId,
       advance_amount: t.advanceAmount,
       min_confirmations: t.minConfirmations,
+      // Only sent when used, so trips without a shortlist work before the migration is run.
+      ...(t.destinations?.length ? { destinations: t.destinations } : {}),
     })
     .select("id, admin_token")
     .single();
+  if (error && /destinations/.test(error.message ?? ""))
+    fail(500, "Picking places needs one more database column. Run supabase/migration.sql in the Supabase SQL editor, or choose \"Let the app suggest\".");
   if (error) throw error;
   return { id: data.id as string, adminToken: data.admin_token as string };
 }
@@ -121,6 +126,7 @@ export async function publicState(trip: TripRow, memberName?: string | null, tok
     upiId: trip.upi_id,
     advanceAmount: trip.advance_amount,
     minConfirmations: trip.min_confirmations,
+    shortlist: trip.destinations?.length ? trip.destinations : null,
     dateWindow: trip.decision?.window ?? null,
     options,
     vetoedOptionIds: vetoes.map((v) => v.option_key),

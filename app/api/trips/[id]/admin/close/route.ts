@@ -11,9 +11,9 @@ export const POST = handle(async (req, ctx: RouteContext<"/api/trips/[id]/admin/
   const responses = await getResponses(trip.id);
   if (responses.length < 2) fail(409, "Wait for at least 2 people to submit");
 
-  const { window, options } = decide(trip.members, responses);
+  const { window, options } = decide(trip.members, responses, trip.destinations ?? undefined);
   if (!window) fail(409, "Nobody's dates leave room for a 3-day trip in the next 3 months");
-  if (options.length === 0) fail(409, "Every destination hits someone's dealbreaker — ask people to loosen up");
+  if (options.length === 0) fail(409, "Every destination hits someone's dealbreaker. Ask people to loosen up");
 
   const { data, error } = await db()
     .from("trips")

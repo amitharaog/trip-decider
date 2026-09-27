@@ -3,11 +3,24 @@
 import type { ReactNode } from "react";
 import { rupees } from "@/lib/api";
 import { formatDate, formatRange, todayIST } from "@/lib/dates";
-import { HOME_CITY } from "@/lib/destinations";
+import { DESTINATIONS, HOME_CITY } from "@/lib/destinations";
 import type { DateWindow, PublicTrip, TripOption, TripStatus } from "@/lib/types";
 import { DestinationArt, FitBar, FitList, typeArt } from "./Destination";
 import Journey from "./Journey";
 import { Avatar, Badge, Card, Eyebrow, ProgressBar } from "./ui";
+
+/** Names of the places the organizer put on the table, or null if the app suggests. */
+export function shortlistNames(trip: PublicTrip) {
+  return trip.shortlist ? DESTINATIONS.filter((d) => trip.shortlist!.includes(d.id)).map((d) => d.name) : null;
+}
+
+/** One line on how the options are picked, for "what happens next" copy. */
+export function howPlacesArePicked(trip: PublicTrip) {
+  const names = shortlistNames(trip);
+  if (!names) return "The app picks the dates and the top 3 places.";
+  if (names.length === 1) return `The app picks the dates. It's ${names[0]} unless the group would rather go elsewhere.`;
+  return `The app picks the dates and ranks ${trip.organizerName}'s places plus any the group suggested.`;
+}
 
 export function daysUntil(date: string) {
   return Math.round((Date.parse(date) - Date.parse(todayIST())) / 86_400_000);
@@ -33,6 +46,7 @@ export function TripHero({ trip, eyebrow, right }: { trip: PublicTrip; eyebrow: 
             <Badge tone={badge.tone}>{badge.label}</Badge>
             <span>Organized by {trip.organizerName}</span>
           </div>
+          {trip.status === "collecting" && <WhereLine trip={trip} />}
         </div>
         {right}
       </div>
@@ -40,6 +54,26 @@ export function TripHero({ trip, eyebrow, right }: { trip: PublicTrip; eyebrow: 
         <Journey status={trip.status} />
       </div>
     </Card>
+  );
+}
+
+function WhereLine({ trip }: { trip: PublicTrip }) {
+  const names = shortlistNames(trip);
+  return (
+    <p className="mt-3 inline-flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      <span aria-hidden>📍</span>
+      {!names ? (
+        <span>Where: the app suggests the best 3 places for the group</span>
+      ) : names.length === 1 ? (
+        <span>
+          {trip.organizerName} is keen on <b>{names[0]}</b>. Everyone can say yes or suggest somewhere else
+        </span>
+      ) : (
+        <span>
+          {trip.organizerName} is choosing between <b>{names.join(", ")}</b>. Everyone can suggest others
+        </span>
+      )}
+    </p>
   );
 }
 
@@ -85,7 +119,16 @@ export function OptionFacts({ option }: { option: TripOption }) {
       </span>
       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">💸 {option.costLabel}</span>
       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">🚗 {option.travelLabel}</span>
+      {!!option.votes && <VotesPill votes={option.votes} />}
     </div>
+  );
+}
+
+function VotesPill({ votes }: { votes: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 font-bold text-brand-700">
+      👍 {votes} {votes === 1 ? "wants" : "want"} this
+    </span>
   );
 }
 
@@ -152,6 +195,11 @@ export function OptionTiles({ trip }: { trip: PublicTrip }) {
                   <p className="text-xs text-slate-500">
                     {o.costLabel} · {o.travelLabel}
                   </p>
+                  {!!o.votes && (
+                    <p className="mt-1 text-xs font-bold text-brand-700">
+                      👍 {o.votes} {o.votes === 1 ? "wants" : "want"} this
+                    </p>
+                  )}
                 </div>
                 <FitBar fits={o.fits} />
               </div>

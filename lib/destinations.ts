@@ -3,6 +3,9 @@ import type { DestinationType } from "./types";
 // Travel is measured door-to-door from the group's home city.
 export const HOME_CITY = "Bengaluru";
 
+// The most places an organizer can put on the table.
+export const MAX_SHORTLIST = 5;
+
 export type Destination = {
   id: string;
   name: string;
