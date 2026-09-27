@@ -16,6 +16,13 @@ Trip status goes `collecting` → `deciding` (options out, vetoes open) → `con
 
 "Load demo trip" on `/` creates Riya's trip with Siddharth, Karan and Aisha already answered. Preethi hasn't answered yet, so you can fill in her form.
 
+## UI
+
+- **Landing (`/`)**: a 3-step setup wizard (trip, crew, commitment) next to the four-stage explainer, plus a one-tap demo.
+- **Member dashboard (`/t/[id]`)**: pick your name from avatars, answer a 5-step private form (quick-pick weekends, place type, budget, dealbreakers, review), then see the plan, your veto, the UPI payment and the fit view.
+- **Organizer dashboard (`/t/[id]/admin`)**: stat tiles (answers, dates, plan, paid), a "your next step" card for the current stage, WhatsApp nudges, payment verification, options and fit matrix.
+- A progress strip on every trip page shows the four stages: Set up → Collect → Decide → Commit.
+
 ## Decision rules (`lib/decide.ts`, `lib/dates.ts`)
 
 - **Dates:** every 3- and 4-day window starting 7–92 days out. A member can make it only if it fits inside one of their ranges. Windows are ranked by most people, then most weekend days, then longer trip, then earliest.
