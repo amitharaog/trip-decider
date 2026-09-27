@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AdminView from "@/components/AdminView";
+import { Shell } from "@/components/ui";
 import { safeEqual } from "@/lib/http";
 import { adminState, getTrip } from "@/lib/trips";
 
@@ -13,10 +14,16 @@ export default async function AdminPage(props: PageProps<"/t/[id]/admin">) {
   if (!trip) notFound();
   if (!safeEqual(trip.admin_token, token)) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
-        <h1 className="text-lg font-bold">This admin link isn&apos;t valid</h1>
-        <p className="mt-1 text-sm">Use the full private link you got when you created the trip.</p>
-      </div>
+      <Shell>
+        <div className="mx-auto max-w-md rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-soft">
+          <p className="text-5xl" aria-hidden>🔑</p>
+          <h1 className="mt-3 text-xl font-extrabold">This organizer link isn&apos;t valid</h1>
+          <p className="mt-2 text-sm text-slate-600">Use the full private link you got when you created the trip.</p>
+          <a href={`/t/${id}`} className="mt-5 inline-block text-sm font-bold text-brand-700 underline">
+            Open the group page instead
+          </a>
+        </div>
+      </Shell>
     );
   }
   return <AdminView initial={await adminState(trip)} />;
