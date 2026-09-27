@@ -19,9 +19,17 @@ export function handle<C>(fn: (req: Request, ctx: C) => Promise<Response>) {
     } catch (e) {
       if (e instanceof HttpError) return Response.json({ error: e.message }, { status: e.status });
       console.error(e);
-      return Response.json({ error: "Something went wrong. Try again." }, { status: 500 });
+      // Locally, show the real reason (e.g. missing env vars); in production keep it generic.
+      const detail = process.env.NODE_ENV !== "production" ? ` (${errorText(e)})` : "";
+      return Response.json({ error: `Something went wrong. Try again.${detail}` }, { status: 500 });
     }
   };
+}
+
+function errorText(e: unknown) {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
+  return String(e);
 }
 
 export async function readJson(req: Request): Promise<Record<string, unknown>> {
