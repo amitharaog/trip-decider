@@ -5,7 +5,7 @@ import { api, rupees } from "@/lib/api";
 import { formatDate, formatRange } from "@/lib/dates";
 import type { AdminState } from "@/lib/trips";
 import { FitMatrix } from "./Destination";
-import { DatesCard, OptionTiles, PeopleCard, PlanHero, TripHero, TripIsOn, daysUntil } from "./TripParts";
+import { DatesCard, howPlacesArePicked, OptionTiles, PeopleCard, PlanHero, TripHero, TripIsOn, daysUntil } from "./TripParts";
 import { Avatar, Badge, Button, Card, ErrorNote, Eyebrow, LinkBox, ProgressBar, ProgressRing, Shell, Stat, WhatsAppButton, useConfirm } from "./ui";
 
 const noop = () => () => {};
@@ -93,7 +93,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
         <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
           <Stat icon="📝" tone="cyan" label="Answers in" value={`${trip.submitted.length} / ${trip.members.length}`} sub={missing.length ? `${missing.length} still to answer` : "Everyone answered"} />
           <Stat icon="📅" tone="brand" label="Dates" value={w ? formatRange(w.start, w.end) : "Not picked yet"} sub={w ? `${w.available.length} can make it${daysUntil(w.start) > 0 ? ` · in ${daysUntil(w.start)} days` : ""}` : "Picked when you close collection"} />
-          <Stat icon="⭐" tone="amber" label="The plan" value={plan?.name ?? "Not picked yet"} sub={plan ? `${trip.vetoedOptionIds.length} veto${trip.vetoedOptionIds.length === 1 ? "" : "es"} used` : "Top 3 options come next"} />
+          <Stat icon="⭐" tone="amber" label="The plan" value={plan?.name ?? "Not picked yet"} sub={plan ? `${trip.vetoedOptionIds.length} veto${trip.vetoedOptionIds.length === 1 ? "" : "es"} used` : trip.shortlist ? "Your places + the group's picks" : "Top 3 options come next"} />
           <Stat icon="🎟️" tone="green" label="Paid & verified" value={`${verifiedCount} / ${trip.minConfirmations}`} sub={`${rupees(trip.advanceAmount)} each · ${rupees(verifiedCount * trip.advanceAmount)} in`} />
         </div>
 
@@ -130,9 +130,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
                 </div>
                 <div className="mt-6 border-t border-slate-100 pt-5">
                   <p className="mb-3 text-sm text-slate-600">
-                    Don&apos;t wait for everyone. When you close, the app locks the dates most people can make, then ranks the top 3 places. Anyone who
-                    hasn&apos;t answered goes with the group.
-                  </p>
+                    Don&apos;t wait for everyone. When you close, the app locks the dates most people can make. {howPlacesArePicked(trip)} Anyone who hasn&apos;t answered goes with the group.</p>
                   <Button size="lg" className="w-full" disabled={!!busy || trip.submitted.length < 2} onClick={closeCollection}>
                     {busy === "close" ? "Working it out…" : "Close collection & pick the plan →"}
                   </Button>
@@ -229,7 +227,7 @@ export default function AdminView({ initial }: { initial: AdminState }) {
             {trip.status !== "collecting" && trip.options && trip.options.length > 0 && (
               <Card className="animate-rise">
                 <Eyebrow>Options</Eyebrow>
-                <h3 className="mt-1 text-lg font-extrabold">Top {trip.options.length}, ranked by fit</h3>
+                <h3 className="mt-1 text-lg font-extrabold">{trip.options.length === 1 ? "Everyone's in for your pick" : `Top ${trip.options.length}, ranked by fit`}</h3>
                 <div className="mt-4">
                   <OptionTiles trip={trip} />
                 </div>

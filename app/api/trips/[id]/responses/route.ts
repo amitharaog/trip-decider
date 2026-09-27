@@ -21,10 +21,14 @@ export const POST = handle(async (req, ctx: RouteContext<"/api/trips/[id]/respon
       destination_types: r.destinationTypes,
       budget_band: r.budget,
       dealbreakers: r.dealbreakers,
+      // Only sent when used, so answers still save before the migration is run.
+      ...(r.wants.length ? { wants: r.wants } : {}),
     })
     .select("id")
     .single();
   if (error?.code === "23505") fail(409, `${member} has already submitted. Answers are locked`);
+  if (error && /wants/.test(error.message ?? ""))
+    fail(500, "Saving place choices needs one more database column. Ask the organizer to run supabase/migration.sql in Supabase.");
   if (error) throw error;
   return Response.json({ memberToken: memberToken(data.id) }, { status: 201 });
 });

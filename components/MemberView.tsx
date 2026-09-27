@@ -5,7 +5,7 @@ import { api, rupees } from "@/lib/api";
 import type { PublicTrip } from "@/lib/types";
 import { FitMatrix } from "./Destination";
 import PreferenceForm from "./PreferenceForm";
-import { DatesCard, OptionTiles, PeopleCard, PlanHero, RulesCard, TripHero, TripIsOn } from "./TripParts";
+import { DatesCard, howPlacesArePicked, OptionTiles, PeopleCard, PlanHero, RulesCard, TripHero, TripIsOn } from "./TripParts";
 import UpiPay from "./UpiPay";
 import { Avatar, Button, Card, ErrorNote, Eyebrow, ProgressRing, Shell, useConfirm } from "./ui";
 
@@ -104,13 +104,15 @@ export default function MemberView({ initial }: { initial: PublicTrip }) {
           <Card className="animate-rise bg-linear-to-br! from-cyan-50 to-white">
             <p className="text-lg font-extrabold">Hey {me} 👋</p>
             <p className="mt-1 text-sm text-slate-600">
-              {trip.organizerName} is planning <b>{trip.name}</b>. Answer 4 quick questions, once and honestly. The app finds the dates and places that
-              work for the most people.
+              {trip.organizerName} is planning <b>{trip.name}</b>. Answer a few quick questions, once and honestly.{" "}
+The app finds the dates and places that work for the most people.
             </p>
           </Card>
           <PreferenceForm
             tripId={trip.id}
             member={me}
+            organizerName={trip.organizerName}
+            shortlist={trip.shortlist}
             onSubmitted={(token) => {
               write(tokenKey(trip.id, me), token);
               refresh(me);
@@ -201,7 +203,7 @@ function Waiting({ trip, name, fromThisPhone }: { trip: PublicTrip; name: string
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-decide">2.</span>
-            {trip.organizerName} closes collection. The app picks the dates and top 3 places.
+            {trip.organizerName} closes collection. {howPlacesArePicked(trip)}
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-commit">3.</span>

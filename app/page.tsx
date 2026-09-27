@@ -4,7 +4,7 @@ import { Shell } from "@/components/ui";
 const STEPS = [
   { n: 1, title: "Set up", body: "Name the trip, add friends, set the advance.", color: "from-indigo-500 to-violet-500", icon: "🧭" },
   { n: 2, title: "Collect", body: "Everyone answers once, privately. Answers lock.", color: "from-cyan-500 to-sky-500", icon: "📝" },
-  { n: 3, title: "Decide", body: "Dates first, then the top 3 places. One veto each.", color: "from-amber-500 to-orange-500", icon: "⚖️" },
+  { n: 3, title: "Decide", body: "Dates first, then your place or the top 3. One veto each.", color: "from-amber-500 to-orange-500", icon: "⚖️" },
   { n: 4, title: "Commit", body: "Pay a small advance. The trip is on once enough are in.", color: "from-emerald-500 to-teal-500", icon: "🎟️" },
 ];
 

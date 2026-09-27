@@ -1,6 +1,7 @@
 import "server-only";
 import { HORIZON_DAYS, addDays, isValidDate, todayIST } from "./dates";
 import { fail } from "./http";
+import { DESTINATIONS, MAX_SHORTLIST } from "./destinations";
 import type { NewTrip } from "./trips";
 import { BUDGETS, DEALBREAKERS, DESTINATION_TYPES, type Budget, type DateRange, type Dealbreaker, type DestinationType } from "./types";
 
@@ -34,7 +35,8 @@ export function parseNewTrip(body: Record<string, unknown>): NewTrip {
   if (!/^[\w.\-]{2,}@[a-zA-Z][\w.\-]*$/.test(upiId)) fail(400, "That doesn't look like a UPI ID (e.g. name@okhdfcbank)");
   const advanceAmount = int(body.advanceAmount ?? 2000, "Advance amount", 1, 100000);
   const minConfirmations = int(body.minConfirmations ?? 3, "Minimum confirmations", 1, members.length);
-  return { name, organizerName, members, upiId, advanceAmount, minConfirmations };
+  const destinations = pick(body.destinations, DESTINATIONS).slice(0, MAX_SHORTLIST);
+  return { name, organizerName, members, upiId, advanceAmount, minConfirmations, destinations };
 }
 
 export type NewResponse = {
@@ -42,6 +44,7 @@ export type NewResponse = {
   destinationTypes: DestinationType[];
   budget: Budget;
   dealbreakers: Dealbreaker[];
+  wants: string[];
 };
 
 function pick<T extends string>(v: unknown, allowed: readonly { id: T }[]): T[] {
@@ -68,5 +71,6 @@ export function parseResponse(body: Record<string, unknown>): NewResponse {
   const budget = BUDGETS.find((b) => b.id === body.budget)?.id;
   if (!budget) fail(400, "Pick a budget");
   const dealbreakers = pick(body.dealbreakers, DEALBREAKERS);
-  return { windows, destinationTypes, budget, dealbreakers };
+  const wants = pick(body.wants, DESTINATIONS).slice(0, MAX_SHORTLIST);
+  return { windows, destinationTypes, budget, dealbreakers, wants };
 }
